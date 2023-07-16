@@ -19,3 +19,11 @@ wasm-pack test --headless --firefox
 ```
 wasm-pack publish
 ```
+
+## 🚴 Run
+
+Start the webpack server:
+
+```
+cd client/ && npm run start
+```
