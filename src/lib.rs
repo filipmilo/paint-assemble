@@ -1,15 +1,18 @@
 mod utils;
 
-use wasm_bindgen::prelude::*;
 use std::cell::Cell;
 use std::rc::Rc;
+use utils::get_document;
+use wasm_bindgen::prelude::*;
+use web_sys::HtmlCanvasElement;
 
 #[wasm_bindgen(start)]
 fn start() -> Result<(), JsValue> {
-    let document = web_sys::window().unwrap().document().unwrap();
+    let document = get_document();
     let canvas = document
         .create_element("canvas")?
         .dyn_into::<web_sys::HtmlCanvasElement>()?;
+    canvas.set_attribute("id", "canvas")?;
     document.body().unwrap().append_child(&canvas)?;
     canvas.set_width(1500);
     canvas.set_height(1200);
@@ -56,3 +59,23 @@ fn start() -> Result<(), JsValue> {
     }
     Ok(())
 }
+
+#[wasm_bindgen]
+pub fn set_stroke_width(width: f64) -> Result<(), JsValue> {
+    let document = get_document();
+
+    let canvas = document
+        .get_element_by_id("canvas")
+        .unwrap()
+        .dyn_into::<web_sys::HtmlCanvasElement>()?;
+
+    let context = canvas
+        .get_context("2d")?
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
+
+    context.set_line_width(width);
+
+    Ok(())
+}
+
