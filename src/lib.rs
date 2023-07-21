@@ -4,7 +4,6 @@ use std::cell::Cell;
 use std::rc::Rc;
 use utils::get_document;
 use wasm_bindgen::prelude::*;
-use web_sys::HtmlCanvasElement;
 
 #[wasm_bindgen(start)]
 fn start() -> Result<(), JsValue> {
@@ -21,6 +20,7 @@ fn start() -> Result<(), JsValue> {
         .get_context("2d")?
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()?;
+    context.set_line_cap("round");
     let context = Rc::new(context);
     let pressed = Rc::new(Cell::new(false));
     {
