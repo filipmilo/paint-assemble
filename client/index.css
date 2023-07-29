@@ -14,26 +14,44 @@
   border: none;
 }
 
+#eraser {
+  background: url(assets/eraser.png);
+}
 #red {
   background-color: red;
 }
 #black {
   background-color: black;
 }
+#gray {
+  background-color: gray;
+}
 #yellow {
   background-color: yellow;
+}
+#orange {
+  background-color: orange;
 }
 #green {
   background-color: green;
 }
+#jade {
+  background-color: #00A86B;
+}
 #blue {
   background-color: blue;
+}
+#water-blue {
+  background-color: #1B95E0;
 }
 #brown {
   background-color: brown;
 }
 #purple {
   background-color: purple;
+}
+#violet {
+  background-color: #8000FF;
 }
 #pink {
   background-color: pink;
