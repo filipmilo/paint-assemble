@@ -11,10 +11,16 @@
     "start": "export NODE_OPTIONS=--openssl-legacy-provider && webpack-dev-server"
   },
   "devDependencies": {
-    "webpack": "^4.29.3",
-    "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.5",
-    "copy-webpack-plugin": "^5.0.0",
-    "paint-assemble": "file:../pkg"
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.8.1",
+    "mini-css-extract-plugin": "^2.7.6",
+    "paint-assemble": "file:../pkg",
+    "style-loader": "^3.3.3",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^4.10.0",
+    "webpack-dev-server": "^4.15.1"
+  },
+  "dependencies": {
+    "simpledotcss": "^2.2.1"
   }
 }

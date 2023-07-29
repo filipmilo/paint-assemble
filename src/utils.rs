@@ -36,16 +36,10 @@ pub fn get_context() -> Result<CanvasRenderingContext2d, js_sys::Object> {
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
 }
 
-pub fn create_canvas() -> Result<HtmlCanvasElement, Element> {
-    let document = get_document();
-    let canvas = document
-        .create_element("canvas")?
-        .dyn_into::<web_sys::HtmlCanvasElement>()?;
-    canvas.set_attribute("id", "canvas")?;
-    document.body().unwrap().append_child(&canvas)?;
-    canvas.set_width(1500);
-    canvas.set_height(1000);
-    canvas.style().set_property("border", "solid")?;
+pub fn create_canvas(height: u32, width: u32) -> Result<HtmlCanvasElement, Element> {
+    let canvas = get_canvas()?;
+    canvas.set_height(height);
+    canvas.set_width(width);
 
     Ok(canvas)
 }
