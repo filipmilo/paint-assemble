@@ -10,20 +10,29 @@
     <script src="./bootstrap.js"></script>
     <div id="canvas-div">
       <div id="toolbox">
-        <button class="color-button" id="eraser" value="white"></button>
-        <button class="color-button" id="black" value="black"></button>
-        <button class="color-button" id="gray" value="gray"></button>
-        <button class="color-button" id="red" value="red"></button>
-        <button class="color-button" id="blue" value="blue"></button>
-        <button class="color-button" id="water-blue" value="#1B95E0"></button>
-        <button class="color-button" id="yellow" value="yellow"></button>
-        <button class="color-button" id="orange" value="orange"></button>
-        <button class="color-button" id="green" value="green"></button>
-        <button class="color-button" id="jade" value="#00A86B"></button>
-        <button class="color-button" id="brown" value="brown"></button>
-        <button class="color-button" id="purple" value="purple"></button>
-        <button class="color-button" id="violet" value="#8000FF"></button>
-        <button class="color-button" id="pink" value="pink"></button>
+        <div>
+          <button class="color-button" id="eraser" value="white"></button>
+          <button class="color-button" id="black" value="black"></button>
+          <button class="color-button" id="gray" value="gray"></button>
+          <button class="color-button" id="red" value="red"></button>
+          <button class="color-button" id="blue" value="blue"></button>
+          <button class="color-button" id="water-blue" value="#1B95E0"></button>
+          <button class="color-button" id="yellow" value="yellow"></button>
+          <button class="color-button" id="orange" value="orange"></button>
+          <button class="color-button" id="green" value="green"></button>
+          <button class="color-button" id="jade" value="#00A86B"></button>
+          <button class="color-button" id="brown" value="brown"></button>
+          <button class="color-button" id="purple" value="purple"></button>
+          <button class="color-button" id="violet" value="#8000FF"></button>
+          <button class="color-button" id="pink" value="pink"></button>
+        </div>
+        <div id="stroke-buttons">
+          <button class="stroke-button" id="very-small" value="0.5">Very Small</button>
+          <button class="stroke-button" id="small" value="2">Small</button>
+          <button class="stroke-button" id="medium" value="8">Medium</button>
+          <button class="stroke-button" id="large" value="13">Large</button>
+          <button class="stroke-button" id="very-large" value="20">Very Large</button>
+        </div>
       </div>
       <canvas id="canvas"></canvas>
     </div>

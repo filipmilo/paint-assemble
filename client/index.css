@@ -8,9 +8,29 @@
   align-items: centre;
 }
 
+#toolbox {
+  display: flex;
+  flex-direction: column;
+  align-items: centre;
+  gap: 30px;
+}
+
+#stroke-buttons {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 10px;
+}
+
 .color-button {
   width: 20px;
   height: 20px;
+  border: none;
+}
+
+.stroke-button {
+  width: 60px;
+  height: 40px;
   border: none;
 }
 
