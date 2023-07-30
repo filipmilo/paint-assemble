@@ -1,5 +1,5 @@
 ## About
-    Paint application built using webassemly leveraging the power of rust and typescript.
+    Paint application built using webassembly leveraging the power of rust.
     Batchelors degree thesis
 
 ### 🛠️ Build with `wasm-pack build`
@@ -18,4 +18,9 @@ wasm-pack test --headless --firefox
 
 ```
 wasm-pack publish
+```
+
+### Start the application on `localhost:8080`
+```
+cd client && npm run start
 ```
