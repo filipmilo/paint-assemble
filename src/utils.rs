@@ -12,7 +12,7 @@ pub fn _set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-fn get_document() -> Document {
+pub fn get_document() -> Document {
     web_sys::window().unwrap().document().unwrap()
 }
 

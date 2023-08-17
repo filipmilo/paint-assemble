@@ -4,7 +4,7 @@
 
 #canvas-div {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: centre;
 }
 
@@ -13,6 +13,7 @@
   flex-direction: column;
   align-items: centre;
   gap: 30px;
+  width: 12%;
 }
 
 #stroke-buttons {
@@ -75,4 +76,15 @@
 }
 #pink {
   background-color: pink;
+}
+
+
+#paint-assemble {
+  position: relative;
+  flex-direction: column;
+}
+
+#paint-assemble canvas{
+  position: absolute;
+  background-color: transparent;
 }
