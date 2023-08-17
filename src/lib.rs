@@ -1,8 +1,9 @@
 mod utils;
 
-use std::{cell::Cell, rc::Rc};
+use std::{cell::Cell, f64::consts::PI, rc::Rc};
 
 use crate::utils::{get_client_canvas, get_document};
+use utils::two_point_distance;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
@@ -44,7 +45,7 @@ impl Canvas {
 
         canvas.get_context()?.set_line_cap("round");
         canvas.get_top_context()?.set_line_cap("round");
-        canvas.setup_straight_line()?;
+        canvas.setup_circle()?;
 
         Ok(canvas)
     }
@@ -181,6 +182,87 @@ impl Canvas {
                 context.begin_path();
                 context.move_to(line_start_x.get(), line_start_y.get());
                 context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                context.stroke();
+            });
+            self.top_layer
+                .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+
+        Ok(())
+    }
+    fn setup_circle(&self) -> Result<(), JsValue> {
+        let top_context = Rc::new(self.get_top_context()?);
+        let pressed = Rc::new(Cell::new(false));
+        let line_start_x = Rc::new(Cell::new(0.0));
+        let line_start_y = Rc::new(Cell::new(0.0));
+        {
+            let top_context = top_context.clone();
+            let pressed = pressed.clone();
+            let line_start_x = line_start_x.clone();
+            let line_start_y = line_start_y.clone();
+
+            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                top_context.begin_path();
+                line_start_x.set(event.offset_x() as f64);
+                line_start_y.set(event.offset_y() as f64);
+                pressed.set(true);
+            });
+            self.top_layer
+                .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+        {
+            let top_context = top_context.clone();
+            let pressed = pressed.clone();
+
+            let height = self.height;
+            let width = self.width;
+            let line_start_x = line_start_x.clone();
+            let line_start_y = line_start_y.clone();
+
+            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                if pressed.get() {
+                    top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+                    let radius = two_point_distance(
+                        line_start_x.get() as f64,
+                        line_start_y.get() as f64,
+                        event.offset_x() as f64,
+                        event.offset_y() as f64,
+                    );
+                    let _ = top_context.arc(
+                        event.offset_x() as f64,
+                        event.offset_y() as f64,
+                        radius,
+                        0.0,
+                        2.0 * PI,
+                    );
+                    top_context.stroke();
+                    top_context.begin_path();
+                }
+            });
+            self.top_layer
+                .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+        {
+            let context = self.get_context()?;
+            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                pressed.set(false);
+                context.begin_path();
+                let radius = two_point_distance(
+                    line_start_x.get() as f64,
+                    line_start_y.get() as f64,
+                    event.offset_x() as f64,
+                    event.offset_y() as f64,
+                );
+                let _ = context.arc(
+                    event.offset_x() as f64,
+                    event.offset_y() as f64,
+                    radius,
+                    0.0,
+                    2.0 * PI,
+                );
                 context.stroke();
             });
             self.top_layer

@@ -24,3 +24,7 @@ pub fn get_client_canvas() -> Result<HtmlCanvasElement, Element> {
         .unwrap()
         .dyn_into::<web_sys::HtmlCanvasElement>()
 }
+
+pub fn two_point_distance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt()
+}
