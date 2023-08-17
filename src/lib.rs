@@ -45,7 +45,7 @@ impl Canvas {
 
         canvas.get_context()?.set_line_cap("round");
         canvas.get_top_context()?.set_line_cap("round");
-        canvas.setup_circle()?;
+        canvas.setup_default_stroke()?;
 
         Ok(canvas)
     }
@@ -69,24 +69,8 @@ impl Canvas {
 
         Ok(())
     }
-}
 
-impl Canvas {
-    fn get_context(&self) -> Result<CanvasRenderingContext2d, js_sys::Object> {
-        self.underlying_layer
-            .get_context("2d")?
-            .unwrap()
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()
-    }
-
-    fn get_top_context(&self) -> Result<CanvasRenderingContext2d, js_sys::Object> {
-        self.top_layer
-            .get_context("2d")?
-            .unwrap()
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()
-    }
-
-    fn setup_default_stroke(&self) -> Result<(), JsValue> {
+    pub fn setup_default_stroke(&self) -> Result<(), JsValue> {
         let context = Rc::new(self.get_context()?);
         let pressed = Rc::new(Cell::new(false));
         {
@@ -129,7 +113,7 @@ impl Canvas {
         Ok(())
     }
 
-    fn setup_straight_line(&self) -> Result<(), JsValue> {
+    pub fn setup_straight_line(&self) -> Result<(), JsValue> {
         let top_context = Rc::new(self.get_top_context()?);
         let pressed = Rc::new(Cell::new(false));
         let line_start_x = Rc::new(Cell::new(0.0));
@@ -191,7 +175,8 @@ impl Canvas {
 
         Ok(())
     }
-    fn setup_circle(&self) -> Result<(), JsValue> {
+
+    pub fn setup_circle(&self) -> Result<(), JsValue> {
         let top_context = Rc::new(self.get_top_context()?);
         let pressed = Rc::new(Cell::new(false));
         let line_start_x = Rc::new(Cell::new(0.0));
@@ -271,5 +256,21 @@ impl Canvas {
         }
 
         Ok(())
+    }
+}
+
+impl Canvas {
+    fn get_context(&self) -> Result<CanvasRenderingContext2d, js_sys::Object> {
+        self.underlying_layer
+            .get_context("2d")?
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+    }
+
+    fn get_top_context(&self) -> Result<CanvasRenderingContext2d, js_sys::Object> {
+        self.top_layer
+            .get_context("2d")?
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
     }
 }

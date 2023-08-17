@@ -1,5 +1,5 @@
-use wasm_bindgen::JsCast;
-use web_sys::{Document, Element, HtmlCanvasElement};
+use wasm_bindgen::{JsCast, prelude::Closure};
+use web_sys::{Document, Element, HtmlCanvasElement, MouseEvent};
 
 pub fn _set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
@@ -27,4 +27,8 @@ pub fn get_client_canvas() -> Result<HtmlCanvasElement, Element> {
 
 pub fn two_point_distance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt()
+}
+
+pub fn empty_closure() -> Closure<dyn FnMut(MouseEvent)> {
+    Closure::<dyn FnMut(_)>::new(|_| {})
 }
