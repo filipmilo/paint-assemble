@@ -4,7 +4,7 @@
 
 #canvas-div {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: centre;
 }
 
@@ -13,6 +13,7 @@
   flex-direction: column;
   align-items: centre;
   gap: 30px;
+  width: 12%;
 }
 
 #stroke-buttons {
@@ -22,13 +23,18 @@
   gap: 10px;
 }
 
+#shape-buttons {
+  display: flex;
+  gap: 10px;
+}
+
 .color-button {
   width: 20px;
   height: 20px;
   border: none;
 }
 
-.stroke-button {
+.stroke-button, .shape-button {
   width: 60px;
   height: 40px;
   border: none;
@@ -75,4 +81,15 @@
 }
 #pink {
   background-color: pink;
+}
+
+
+#paint-assemble {
+  position: relative;
+  flex-direction: column;
+}
+
+#paint-assemble canvas{
+  position: absolute;
+  background-color: transparent;
 }

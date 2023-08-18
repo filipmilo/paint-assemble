@@ -1,7 +1,5 @@
-use std::{cell::Cell, rc::Rc};
-
-use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlCanvasElement};
+use wasm_bindgen::JsCast;
+use web_sys::{Document, Element, HtmlCanvasElement};
 
 pub fn _set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
@@ -14,11 +12,11 @@ pub fn _set_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-fn get_document() -> Document {
+pub fn get_document() -> Document {
     web_sys::window().unwrap().document().unwrap()
 }
 
-fn get_canvas() -> Result<HtmlCanvasElement, Element> {
+pub fn get_client_canvas() -> Result<HtmlCanvasElement, Element> {
     let document = get_document();
 
     document
@@ -27,62 +25,6 @@ fn get_canvas() -> Result<HtmlCanvasElement, Element> {
         .dyn_into::<web_sys::HtmlCanvasElement>()
 }
 
-pub fn get_context() -> Result<CanvasRenderingContext2d, js_sys::Object> {
-    let canvas = get_canvas()?;
-
-    canvas
-        .get_context("2d")?
-        .unwrap()
-        .dyn_into::<web_sys::CanvasRenderingContext2d>()
-}
-
-pub fn create_canvas(height: u32, width: u32) -> Result<HtmlCanvasElement, Element> {
-    let canvas = get_canvas()?;
-    canvas.set_height(height);
-    canvas.set_width(width);
-
-    Ok(canvas)
-}
-
-pub fn setup_default_stroke(
-    context: CanvasRenderingContext2d,
-    canvas: HtmlCanvasElement,
-) -> Result<(), JsValue> {
-    let context = Rc::new(context);
-    let pressed = Rc::new(Cell::new(false));
-    {
-        let context = context.clone();
-        let pressed = pressed.clone();
-        let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-            context.begin_path();
-            context.move_to(event.offset_x() as f64, event.offset_y() as f64);
-            pressed.set(true);
-        });
-        canvas.add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
-    {
-        let context = context.clone();
-        let pressed = pressed.clone();
-        let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-            if pressed.get() {
-                context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-                context.stroke();
-                context.begin_path();
-                context.move_to(event.offset_x() as f64, event.offset_y() as f64);
-            }
-        });
-        canvas.add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
-    {
-        let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-            pressed.set(false);
-            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-            context.stroke();
-        });
-        canvas.add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
-        closure.forget();
-    }
-    Ok(())
+pub fn two_point_distance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt()
 }
