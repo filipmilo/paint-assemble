@@ -1,11 +1,22 @@
 mod utils;
 
-use std::{cell::Cell, f64::consts::PI, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    f64::consts::PI,
+    rc::Rc,
+};
 
 use crate::utils::{get_client_canvas, get_document};
 use utils::two_point_distance;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+
+#[derive(Clone)]
+enum CurrentMode {
+    Default,
+    StraightLine,
+    Circle,
+}
 
 #[wasm_bindgen]
 pub struct Canvas {
@@ -13,6 +24,7 @@ pub struct Canvas {
     top_layer: HtmlCanvasElement,
     height: u32,
     width: u32,
+    mode: Rc<RefCell<CurrentMode>>,
 }
 
 #[wasm_bindgen]
@@ -29,6 +41,7 @@ impl Canvas {
             top_layer: top_canvas,
             height,
             width,
+            mode: Rc::new(RefCell::new(CurrentMode::Default)),
         };
 
         canvas.underlying_layer.set_height(height);
@@ -45,7 +58,7 @@ impl Canvas {
 
         canvas.get_context()?.set_line_cap("round");
         canvas.get_top_context()?.set_line_cap("round");
-        canvas.setup_default_stroke()?;
+        canvas.setup_modes()?;
 
         Ok(canvas)
     }
@@ -70,191 +83,18 @@ impl Canvas {
         Ok(())
     }
 
-    pub fn setup_default_stroke(&self) -> Result<(), JsValue> {
-        let context = Rc::new(self.get_context()?);
-        let pressed = Rc::new(Cell::new(false));
-        {
-            let context = context.clone();
-            let pressed = pressed.clone();
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                context.begin_path();
-                context.move_to(event.offset_x() as f64, event.offset_y() as f64);
-                pressed.set(true);
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-        {
-            let context = context.clone();
-            let pressed = pressed.clone();
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                if pressed.get() {
-                    context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-                    context.stroke();
-                    context.begin_path();
-                    context.move_to(event.offset_x() as f64, event.offset_y() as f64);
-                }
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-        {
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                pressed.set(false);
-                context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-                context.stroke();
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
+    pub fn set_straight_line(&mut self) -> Result<(), JsValue> {
+        *self.mode.borrow_mut() = CurrentMode::StraightLine;
         Ok(())
     }
 
-    pub fn setup_straight_line(&self) -> Result<(), JsValue> {
-        let top_context = Rc::new(self.get_top_context()?);
-        let pressed = Rc::new(Cell::new(false));
-        let line_start_x = Rc::new(Cell::new(0.0));
-        let line_start_y = Rc::new(Cell::new(0.0));
-        {
-            let top_context = top_context.clone();
-            let pressed = pressed.clone();
-            let line_start_x = line_start_x.clone();
-            let line_start_y = line_start_y.clone();
-
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                top_context.begin_path();
-                line_start_x.set(event.offset_x() as f64);
-                line_start_y.set(event.offset_y() as f64);
-                top_context.move_to(event.offset_x() as f64, event.offset_y() as f64);
-                pressed.set(true);
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-        {
-            let top_context = top_context.clone();
-            let pressed = pressed.clone();
-            let line_start_x = line_start_x.clone();
-            let line_start_y = line_start_y.clone();
-
-            let height = self.height;
-            let width = self.width;
-
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                if pressed.get() {
-                    top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
-                    top_context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-                    top_context.stroke();
-                    top_context.begin_path();
-                    top_context.move_to(line_start_x.get(), line_start_y.get());
-                }
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-        {
-            let context = self.get_context()?;
-            let line_start_x = line_start_x.clone();
-            let line_start_y = line_start_y.clone();
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                pressed.set(false);
-                context.begin_path();
-                context.move_to(line_start_x.get(), line_start_y.get());
-                context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-                context.stroke();
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-
+    pub fn set_circle(&mut self) -> Result<(), JsValue> {
+        *self.mode.borrow_mut() = CurrentMode::Circle;
         Ok(())
     }
 
-    pub fn setup_circle(&self) -> Result<(), JsValue> {
-        let top_context = Rc::new(self.get_top_context()?);
-        let pressed = Rc::new(Cell::new(false));
-        let line_start_x = Rc::new(Cell::new(0.0));
-        let line_start_y = Rc::new(Cell::new(0.0));
-        {
-            let top_context = top_context.clone();
-            let pressed = pressed.clone();
-            let line_start_x = line_start_x.clone();
-            let line_start_y = line_start_y.clone();
-
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                top_context.begin_path();
-                line_start_x.set(event.offset_x() as f64);
-                line_start_y.set(event.offset_y() as f64);
-                pressed.set(true);
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-        {
-            let top_context = top_context.clone();
-            let pressed = pressed.clone();
-
-            let height = self.height;
-            let width = self.width;
-            let line_start_x = line_start_x.clone();
-            let line_start_y = line_start_y.clone();
-
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                if pressed.get() {
-                    top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
-                    let radius = two_point_distance(
-                        line_start_x.get() as f64,
-                        line_start_y.get() as f64,
-                        event.offset_x() as f64,
-                        event.offset_y() as f64,
-                    );
-                    let _ = top_context.arc(
-                        event.offset_x() as f64,
-                        event.offset_y() as f64,
-                        radius,
-                        0.0,
-                        2.0 * PI,
-                    );
-                    top_context.stroke();
-                    top_context.begin_path();
-                }
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-        {
-            let context = self.get_context()?;
-            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                pressed.set(false);
-                context.begin_path();
-                let radius = two_point_distance(
-                    line_start_x.get() as f64,
-                    line_start_y.get() as f64,
-                    event.offset_x() as f64,
-                    event.offset_y() as f64,
-                );
-                let _ = context.arc(
-                    event.offset_x() as f64,
-                    event.offset_y() as f64,
-                    radius,
-                    0.0,
-                    2.0 * PI,
-                );
-                context.stroke();
-            });
-            self.top_layer
-                .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
-            closure.forget();
-        }
-
+    pub fn set_default_stroke(&mut self) -> Result<(), JsValue> {
+        *self.mode.borrow_mut() = CurrentMode::Default;
         Ok(())
     }
 }
@@ -272,5 +112,147 @@ impl Canvas {
             .get_context("2d")?
             .unwrap()
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
+    }
+
+    fn setup_modes(&self) -> Result<(), JsValue> {
+        let context = Rc::new(self.get_context()?);
+        let top_context = Rc::new(self.get_top_context()?);
+
+        let pressed = Rc::new(Cell::new(false));
+
+        let line_start_x = Rc::new(Cell::new(0.0));
+        let line_start_y = Rc::new(Cell::new(0.0));
+
+        {
+            let context = context.clone();
+            let top_context = top_context.clone();
+            let pressed = pressed.clone();
+            let line_start_x = line_start_x.clone();
+            let line_start_y = line_start_y.clone();
+            let mode = self.mode.clone();
+
+            let closure =
+                Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                    match *mode.borrow() {
+                        CurrentMode::Default => {
+                            context.begin_path();
+                            context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                            pressed.set(true);
+                        }
+                        CurrentMode::StraightLine => {
+                            top_context.begin_path();
+                            line_start_x.set(event.offset_x() as f64);
+                            line_start_y.set(event.offset_y() as f64);
+                            top_context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                            pressed.set(true);
+                        }
+                        CurrentMode::Circle => {
+                            top_context.begin_path();
+                            line_start_x.set(event.offset_x() as f64);
+                            line_start_y.set(event.offset_y() as f64);
+                            pressed.set(true);
+                        }
+                    }
+                });
+
+            self.top_layer
+                .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+        {
+            let context = context.clone();
+            let top_context = top_context.clone();
+            let pressed = pressed.clone();
+            let mode = self.mode.clone();
+            let line_start_x = line_start_x.clone();
+            let line_start_y = line_start_y.clone();
+            let height = self.height;
+            let width = self.width;
+
+            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                if pressed.get() {
+                    match *mode.borrow() {
+                        CurrentMode::Default => {
+                            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                            context.stroke();
+                            context.begin_path();
+                            context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                        }
+                        CurrentMode::StraightLine => {
+                            top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+                            top_context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                            top_context.stroke();
+                            top_context.begin_path();
+                            top_context.move_to(line_start_x.get(), line_start_y.get());
+                        }
+                        CurrentMode::Circle => {
+                            top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+                            let radius = two_point_distance(
+                                line_start_x.get() as f64,
+                                line_start_y.get() as f64,
+                                event.offset_x() as f64,
+                                event.offset_y() as f64,
+                            );
+                            let _ = top_context.arc(
+                                event.offset_x() as f64,
+                                event.offset_y() as f64,
+                                radius,
+                                0.0,
+                                2.0 * PI,
+                            );
+                            top_context.stroke();
+                            top_context.begin_path();
+                        }
+                    }
+                }
+            });
+
+            self.top_layer
+                .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+        {
+            let mode = self.mode.clone();
+            let closure =
+                Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                    match *mode.borrow() {
+                        CurrentMode::Default => {
+                            pressed.set(false);
+                            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                            context.stroke();
+                        }
+                        CurrentMode::StraightLine => {
+                            pressed.set(false);
+                            context.begin_path();
+                            context.move_to(line_start_x.get(), line_start_y.get());
+                            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                            context.stroke();
+                        }
+                        CurrentMode::Circle => {
+                            pressed.set(false);
+                            context.begin_path();
+                            let radius = two_point_distance(
+                                line_start_x.get() as f64,
+                                line_start_y.get() as f64,
+                                event.offset_x() as f64,
+                                event.offset_y() as f64,
+                            );
+                            let _ = context.arc(
+                                event.offset_x() as f64,
+                                event.offset_y() as f64,
+                                radius,
+                                0.0,
+                                2.0 * PI,
+                            );
+                            context.stroke();
+                        }
+                    }
+                });
+
+            self.top_layer
+                .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+        Ok(())
     }
 }
