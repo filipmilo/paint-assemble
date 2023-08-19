@@ -19,6 +19,67 @@ enum CurrentMode {
     Fill,
 }
 
+#[derive(Clone)]
+pub enum Color {
+    White,
+    Black,
+    Gray,
+    Red,
+    Blue,
+    WaterBlue,
+    Yellow,
+    Orange,
+    Green,
+    Jade,
+    Brown,
+    Purple,
+    Violet,
+    Pink,
+    Custom(u8, u8, u8, u8),
+}
+
+impl Color {
+    fn value(&self) -> (u8, u8, u8, u8) {
+        match *self {
+            Color::White => (255, 255, 255, 255),
+            Color::Black => (0, 0, 0, 255),
+            Color::Red => (255, 0, 0, 255),
+            Color::Gray => (128, 128, 128, 255),
+            Color::Blue => (0, 0, 255, 255),
+            Color::WaterBlue => (27, 149, 224, 255),
+            Color::Yellow => (255, 255, 0, 255),
+            Color::Orange => (255, 165, 0, 255),
+            Color::Green => (0, 128, 0, 255),
+            Color::Jade => (0, 168, 107, 255),
+            Color::Brown => (165, 42, 42, 255),
+            Color::Purple => (128, 0, 128, 255),
+            Color::Violet => (238, 130, 238, 255),
+            Color::Pink => (255, 192, 203, 255),
+            Color::Custom(r, g, b, a) => (r, g, b, a),
+        }
+    }
+
+    fn from_str(color: String) -> Color {
+        match &color[..] {
+            "white" => Color::White,
+            "black" => Color::Black,
+            "gray" => Color::Gray,
+            "red" => Color::Red,
+            "blue" => Color::Blue,
+            "#1B95E0" => Color::WaterBlue,
+            "yellow" => Color::Yellow,
+            "orange" => Color::Orange,
+            "green" => Color::Green,
+            "#00A86B" => Color::Jade,
+            "brown" => Color::Brown,
+            "purple" => Color::Purple,
+            "#8000FF" => Color::Violet,
+            "pink" => Color::Pink,
+            _ => Color::Black,
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub struct Canvas {
     underlying_layer: HtmlCanvasElement,
@@ -26,6 +87,7 @@ pub struct Canvas {
     height: u32,
     width: u32,
     mode: Rc<RefCell<CurrentMode>>,
+    current_color: Rc<RefCell<Color>>,
 }
 
 #[wasm_bindgen]
@@ -43,6 +105,7 @@ impl Canvas {
             height,
             width,
             mode: Rc::new(RefCell::new(CurrentMode::Default)),
+            current_color: Rc::new(RefCell::new(Color::Black)),
         };
 
         canvas.underlying_layer.set_height(height);
@@ -80,6 +143,8 @@ impl Canvas {
 
         context.set_stroke_style(&JsValue::from_str(&color));
         top_context.set_stroke_style(&JsValue::from_str(&color));
+
+        *self.current_color.borrow_mut() = Color::from_str(color);
 
         Ok(())
     }
@@ -138,6 +203,7 @@ impl Canvas {
             let mode = self.mode.clone();
             let height = self.height;
             let width = self.width;
+            let color = self.current_color.clone();
 
             let closure =
                 Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
@@ -167,6 +233,7 @@ impl Canvas {
                                 event.offset_y() as usize,
                                 width,
                                 height,
+                                &color.borrow(),
                             );
                         }
                     }

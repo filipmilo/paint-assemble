@@ -2,6 +2,8 @@ use std::rc::Rc;
 use wasm_bindgen::{prelude::wasm_bindgen, Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlCanvasElement, ImageData};
 
+use crate::Color;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -42,22 +44,22 @@ pub fn fill(
     y: usize,
     width: u32,
     height: u32,
+    color: &Color,
 ) -> Result<(), JsValue> {
     let image = ctx.get_image_data(0.0, 0.0, width as f64, height as f64)?;
     let mut data = image.data();
 
-    let replace_color: (u8, u8, u8, u8) = (0, 0, 0, 0);
-    let replacement_color: (u8, u8, u8, u8) = (255, 0, 0, 255);
+    let replacement_color = color.value();
 
     let index = y * (width as usize * 4) + x * 4;
-    let node = (
+    let replace_color = (
         data[index],
         data[index + 1],
         data[index + 2],
         data[index + 3],
     );
 
-    if node != replace_color {
+    if replacement_color == replace_color {
         return Ok(());
     }
 
