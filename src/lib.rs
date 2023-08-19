@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::utils::{get_client_canvas, get_document};
-use utils::two_point_distance;
+use utils::{fill, two_point_distance};
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
@@ -16,6 +16,7 @@ enum CurrentMode {
     Default,
     StraightLine,
     Circle,
+    Fill,
 }
 
 #[wasm_bindgen]
@@ -97,6 +98,11 @@ impl Canvas {
         *self.mode.borrow_mut() = CurrentMode::Default;
         Ok(())
     }
+
+    pub fn set_fill(&mut self) -> Result<(), JsValue> {
+        *self.mode.borrow_mut() = CurrentMode::Fill;
+        Ok(())
+    }
 }
 
 impl Canvas {
@@ -130,6 +136,8 @@ impl Canvas {
             let line_start_x = line_start_x.clone();
             let line_start_y = line_start_y.clone();
             let mode = self.mode.clone();
+            let height = self.height;
+            let width = self.width;
 
             let closure =
                 Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
@@ -151,6 +159,15 @@ impl Canvas {
                             line_start_x.set(event.offset_x() as f64);
                             line_start_y.set(event.offset_y() as f64);
                             pressed.set(true);
+                        }
+                        CurrentMode::Fill => {
+                            let _ = fill(
+                                context.clone(),
+                                event.offset_x() as usize,
+                                event.offset_y() as usize,
+                                width,
+                                height,
+                            );
                         }
                     }
                 });
@@ -203,6 +220,7 @@ impl Canvas {
                             top_context.stroke();
                             top_context.begin_path();
                         }
+                        _ => (),
                     }
                 }
             });
@@ -246,6 +264,7 @@ impl Canvas {
                             );
                             context.stroke();
                         }
+                        _ => (),
                     }
                 });
 

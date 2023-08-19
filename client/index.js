@@ -18,6 +18,10 @@ document.querySelector("#circle").addEventListener("click", () => canvas.set_cir
 
 document.querySelector("#pen").addEventListener("click", () => canvas.set_default_stroke());
 
+document.querySelector("#fill").addEventListener("click", () => {
+  canvas.set_fill()
+});
+
 const canvas = Canvas.new_canvas(800, 1500);
 canvas.set_stroke_width(8)
 canvas.set_stroke_color("black");
