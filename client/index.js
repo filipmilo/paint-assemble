@@ -30,6 +30,22 @@ document.querySelector("#export").addEventListener("click", () => {
   download.click();
 });
 
+document.querySelector("#import").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+
+  reader.onload = (event) => {
+    const uri = event.target.result;
+
+    const img = new Image();
+    img.onload = function() {
+       canvas.import(img);
+    };
+    img.src = uri;
+  }
+});
+
 const canvas = Canvas.new_canvas(800, 1500);
 canvas.set_stroke_width(8)
 canvas.set_stroke_color("black");

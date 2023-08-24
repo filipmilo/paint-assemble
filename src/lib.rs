@@ -172,6 +172,10 @@ impl Canvas {
     pub fn export(&self) -> Result<String, JsValue> {
         self.underlying_layer.to_data_url()
     }
+
+    pub fn import(&self, canvas: HtmlCanvasElement) -> Result<(), JsValue> {
+        self.get_context()?.draw_image_with_html_canvas_element(&canvas, 0.0, 0.0)
+    }
 }
 
 impl Canvas {
