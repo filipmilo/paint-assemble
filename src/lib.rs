@@ -168,6 +168,10 @@ impl Canvas {
         *self.mode.borrow_mut() = CurrentMode::Fill;
         Ok(())
     }
+
+    pub fn export(&self) -> Result<String, JsValue> {
+        self.underlying_layer.to_data_url()
+    }
 }
 
 impl Canvas {
