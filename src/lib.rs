@@ -302,42 +302,44 @@ impl Canvas {
         }
         {
             let mode = self.mode.clone();
-            let closure =
-                Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                    match *mode.borrow() {
-                        CurrentMode::Default => {
-                            pressed.set(false);
-                            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-                            context.stroke();
-                        }
-                        CurrentMode::StraightLine => {
-                            pressed.set(false);
-                            context.begin_path();
-                            context.move_to(line_start_x.get(), line_start_y.get());
-                            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
-                            context.stroke();
-                        }
-                        CurrentMode::Circle => {
-                            pressed.set(false);
-                            context.begin_path();
-                            let radius = two_point_distance(
-                                line_start_x.get() as f64,
-                                line_start_y.get() as f64,
-                                event.offset_x() as f64,
-                                event.offset_y() as f64,
-                            );
-                            let _ = context.arc(
-                                event.offset_x() as f64,
-                                event.offset_y() as f64,
-                                radius,
-                                0.0,
-                                2.0 * PI,
-                            );
-                            context.stroke();
-                        }
-                        _ => (),
+            let height = self.height;
+            let width = self.width;
+            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                match *mode.borrow() {
+                    CurrentMode::Default => {
+                        pressed.set(false);
+                        context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                        context.stroke();
                     }
-                });
+                    CurrentMode::StraightLine => {
+                        pressed.set(false);
+                        context.begin_path();
+                        context.move_to(line_start_x.get(), line_start_y.get());
+                        context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                        context.stroke();
+                    }
+                    CurrentMode::Circle => {
+                        pressed.set(false);
+                        context.begin_path();
+                        let radius = two_point_distance(
+                            line_start_x.get() as f64,
+                            line_start_y.get() as f64,
+                            event.offset_x() as f64,
+                            event.offset_y() as f64,
+                        );
+                        let _ = context.arc(
+                            event.offset_x() as f64,
+                            event.offset_y() as f64,
+                            radius,
+                            0.0,
+                            2.0 * PI,
+                        );
+                        context.stroke();
+                    }
+                    _ => (),
+                }
+                top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+            });
 
             self.top_layer
                 .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
