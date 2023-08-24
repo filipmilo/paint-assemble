@@ -22,6 +22,30 @@ document.querySelector("#fill").addEventListener("click", () => {
   canvas.set_fill()
 });
 
+document.querySelector("#export").addEventListener("click", () => {
+  const url = canvas.export();
+  const download = document.createElement("a");
+  download.download = "paint_assemble_export.png";
+  download.href = url;
+  download.click();
+});
+
+document.querySelector("#import").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+
+  reader.onload = (event) => {
+    const uri = event.target.result;
+
+    const img = new Image();
+    img.onload = function() {
+       canvas.import(img);
+    };
+    img.src = uri;
+  }
+});
+
 const canvas = Canvas.new_canvas(800, 1500);
 canvas.set_stroke_width(8)
 canvas.set_stroke_color("black");
