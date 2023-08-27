@@ -7,7 +7,7 @@ use crate::Color;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
+    pub fn log(s: &str);
 }
 
 pub fn _set_panic_hook() {
@@ -36,6 +36,16 @@ pub fn get_client_canvas() -> Result<HtmlCanvasElement, Element> {
 
 pub fn two_point_distance(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt()
+}
+
+pub fn get_content_inside_rect(
+    ctx: Rc<CanvasRenderingContext2d>,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+) -> Result<ImageData, JsValue> {
+    ctx.get_image_data(x, y, w, h)
 }
 
 pub fn fill(
@@ -90,4 +100,16 @@ pub fn fill(
         0.0,
         0.0,
     )
+}
+
+pub fn define_postition(line_start: f64, offset: f64) -> f64 {
+    if line_start < offset {
+        line_start
+    } else {
+        offset
+    }
+}
+
+pub fn define_distance(line_start: f64, offset: f64) -> f64 {
+    (line_start - offset).abs()
 }

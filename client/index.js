@@ -22,6 +22,10 @@ document.querySelector("#fill").addEventListener("click", () => {
   canvas.set_fill()
 });
 
+document.querySelector("#crop").addEventListener("click", () => {
+  canvas.set_crop()
+});
+
 document.querySelector("#export").addEventListener("click", () => {
   const url = canvas.export();
   const download = document.createElement("a");

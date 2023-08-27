@@ -4,12 +4,16 @@ use std::{
     cell::{Cell, RefCell},
     f64::consts::PI,
     rc::Rc,
+    vec,
 };
 
-use crate::utils::{get_client_canvas, get_document};
-use utils::{fill, two_point_distance};
+use js_sys::Array;
+use utils::{
+    define_distance, define_postition, fill, get_client_canvas, get_content_inside_rect,
+    get_document, two_point_distance,
+};
 use wasm_bindgen::prelude::*;
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
 #[derive(Clone)]
 enum CurrentMode {
@@ -17,6 +21,8 @@ enum CurrentMode {
     StraightLine,
     Circle,
     Fill,
+    Crop,
+    CropPlace(ImageData),
 }
 
 #[derive(Clone)]
@@ -122,6 +128,9 @@ impl Canvas {
 
         canvas.get_context()?.set_line_cap("round");
         canvas.get_top_context()?.set_line_cap("round");
+        canvas
+            .get_context()?
+            .set_fill_style(&JsValue::from_str("white"));
         canvas.setup_modes()?;
 
         Ok(canvas)
@@ -169,12 +178,18 @@ impl Canvas {
         Ok(())
     }
 
+    pub fn set_crop(&mut self) -> Result<(), JsValue> {
+        *self.mode.borrow_mut() = CurrentMode::Crop;
+        Ok(())
+    }
+
     pub fn export(&self) -> Result<String, JsValue> {
         self.underlying_layer.to_data_url()
     }
 
     pub fn import(&self, canvas: HtmlCanvasElement) -> Result<(), JsValue> {
-        self.get_context()?.draw_image_with_html_canvas_element(&canvas, 0.0, 0.0)
+        self.get_context()?
+            .draw_image_with_html_canvas_element(&canvas, 0.0, 0.0)
     }
 }
 
@@ -213,39 +228,57 @@ impl Canvas {
             let width = self.width;
             let color = self.current_color.clone();
 
-            let closure =
-                Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                    match *mode.borrow() {
-                        CurrentMode::Default => {
-                            context.begin_path();
-                            context.move_to(event.offset_x() as f64, event.offset_y() as f64);
-                            pressed.set(true);
-                        }
-                        CurrentMode::StraightLine => {
-                            top_context.begin_path();
-                            line_start_x.set(event.offset_x() as f64);
-                            line_start_y.set(event.offset_y() as f64);
-                            top_context.move_to(event.offset_x() as f64, event.offset_y() as f64);
-                            pressed.set(true);
-                        }
-                        CurrentMode::Circle => {
-                            top_context.begin_path();
-                            line_start_x.set(event.offset_x() as f64);
-                            line_start_y.set(event.offset_y() as f64);
-                            pressed.set(true);
-                        }
-                        CurrentMode::Fill => {
-                            let _ = fill(
-                                context.clone(),
-                                event.offset_x() as usize,
-                                event.offset_y() as usize,
-                                width,
-                                height,
-                                &color.borrow(),
-                            );
-                        }
+            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                match &*mode.borrow() {
+                    CurrentMode::Default => {
+                        context.begin_path();
+                        context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                        pressed.set(true);
                     }
-                });
+                    CurrentMode::StraightLine => {
+                        top_context.begin_path();
+                        line_start_x.set(event.offset_x() as f64);
+                        line_start_y.set(event.offset_y() as f64);
+                        top_context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                        pressed.set(true);
+                    }
+                    CurrentMode::Circle => {
+                        top_context.begin_path();
+                        line_start_x.set(event.offset_x() as f64);
+                        line_start_y.set(event.offset_y() as f64);
+                        pressed.set(true);
+                    }
+                    CurrentMode::Fill => {
+                        let _ = fill(
+                            context.clone(),
+                            event.offset_x() as usize,
+                            event.offset_y() as usize,
+                            width,
+                            height,
+                            &color.borrow(),
+                        );
+                    }
+                    CurrentMode::Crop => {
+                        let _ = top_context.set_line_width(1.0);
+                        let _ = top_context.set_stroke_style(&JsValue::from_str("black"));
+                        let lines: Array = vec![6].into_iter().map(JsValue::from).collect();
+                        let _ = top_context.set_line_dash(&lines);
+                        line_start_x.set(event.offset_x() as f64);
+                        line_start_y.set(event.offset_y() as f64);
+                        top_context.begin_path();
+                        pressed.set(true);
+                    }
+                    CurrentMode::CropPlace(value) => {
+                        top_context.begin_path();
+                        let _ = top_context.put_image_data(
+                            &value,
+                            event.offset_x() as f64,
+                            event.offset_y() as f64,
+                        );
+                        pressed.set(true);
+                    }
+                }
+            });
 
             self.top_layer
                 .add_event_listener_with_callback("mousedown", closure.as_ref().unchecked_ref())?;
@@ -263,7 +296,7 @@ impl Canvas {
 
             let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
                 if pressed.get() {
-                    match *mode.borrow() {
+                    match &*mode.borrow() {
                         CurrentMode::Default => {
                             context.line_to(event.offset_x() as f64, event.offset_y() as f64);
                             context.stroke();
@@ -295,6 +328,29 @@ impl Canvas {
                             top_context.stroke();
                             top_context.begin_path();
                         }
+                        CurrentMode::Crop => {
+                            top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+
+                            let x = define_postition(line_start_x.get(), event.offset_x() as f64);
+                            let y = define_postition(line_start_y.get(), event.offset_y() as f64);
+                            let w = define_distance(line_start_x.get(), event.offset_x() as f64);
+                            let h = define_distance(line_start_y.get(), event.offset_y() as f64);
+
+                            let _ = top_context.rect(x, y, w, h);
+
+                            top_context.stroke();
+                            top_context.begin_path();
+                        }
+                        CurrentMode::CropPlace(value) => {
+                            top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+                            top_context.stroke();
+                            let _ = top_context.put_image_data(
+                                &value,
+                                event.offset_x() as f64,
+                                event.offset_y() as f64,
+                            );
+                            top_context.begin_path();
+                        }
                         _ => (),
                     }
                 }
@@ -309,21 +365,21 @@ impl Canvas {
             let height = self.height;
             let width = self.width;
             let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
-                match *mode.borrow() {
+                pressed.set(false);
+                let mut mode = mode.borrow_mut();
+                match &*mode {
                     CurrentMode::Default => {
-                        pressed.set(false);
                         context.line_to(event.offset_x() as f64, event.offset_y() as f64);
                         context.stroke();
                     }
                     CurrentMode::StraightLine => {
-                        pressed.set(false);
                         context.begin_path();
                         context.move_to(line_start_x.get(), line_start_y.get());
                         context.line_to(event.offset_x() as f64, event.offset_y() as f64);
                         context.stroke();
+                        top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
                     }
                     CurrentMode::Circle => {
-                        pressed.set(false);
                         context.begin_path();
                         let radius = two_point_distance(
                             line_start_x.get() as f64,
@@ -339,10 +395,42 @@ impl Canvas {
                             2.0 * PI,
                         );
                         context.stroke();
+                        top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+                    }
+                    CurrentMode::Crop => {
+                        let _ = top_context.set_line_dash(&Array::new());
+
+                        let x = define_postition(line_start_x.get(), event.offset_x() as f64);
+                        let y = define_postition(line_start_y.get(), event.offset_y() as f64);
+                        let w = define_distance(line_start_x.get(), event.offset_x() as f64);
+                        let h = define_distance(line_start_y.get(), event.offset_y() as f64);
+
+                        let image = get_content_inside_rect(context.clone(), x, y, w, h);
+
+                        if let Ok(value) = image {
+                            let _ = top_context.put_image_data(&value, x, y);
+                            *mode = CurrentMode::CropPlace(value);
+
+                            let _ = context.fill_rect(x, y, w, h);
+                        }
+                        top_context.stroke();
+                    }
+                    CurrentMode::CropPlace(value) => {
+                        top_context.stroke();
+                        let _ = context.put_image_data(
+                            &value,
+                            event.offset_x() as f64,
+                            event.offset_y() as f64,
+                        );
+
+                        let _ = top_context.set_line_width(context.line_width());
+                        let _ = top_context.set_stroke_style(&context.stroke_style());
+
+                        *mode = CurrentMode::Crop;
+                        top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
                     }
                     _ => (),
                 }
-                top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
             });
 
             self.top_layer
