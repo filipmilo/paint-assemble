@@ -25,6 +25,7 @@
 
 #shape-buttons {
   display: flex;
+  width: 10%;
   gap: 10px;
 }
 

@@ -126,11 +126,7 @@ impl Canvas {
 
         let _ = paint_div.append_child(&canvas.top_layer);
 
-        canvas.get_context()?.set_line_cap("round");
-        canvas.get_top_context()?.set_line_cap("round");
-        canvas
-            .get_context()?
-            .set_fill_style(&JsValue::from_str("white"));
+        canvas.setup_initial_canvas()?;
         canvas.setup_modes()?;
 
         Ok(canvas)
@@ -206,6 +202,17 @@ impl Canvas {
             .get_context("2d")?
             .unwrap()
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
+    }
+
+    fn setup_initial_canvas(&self) -> Result<(), JsValue> {
+        self.get_top_context()?.set_line_cap("round");
+
+        let context = self.get_context()?;
+        context.set_line_cap("round");
+        context.set_fill_style(&JsValue::from_str("white"));
+        context.fill_rect(0.0, 0.0, self.width as f64, self.height as f64);
+
+        Ok(())
     }
 
     fn setup_modes(&self) -> Result<(), JsValue> {
