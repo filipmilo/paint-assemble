@@ -7,6 +7,7 @@ use std::{
     vec,
 };
 
+use colors_transform::{Rgb, Color as CrateColor};
 use js_sys::Array;
 use utils::{
     define_distance, define_postition, fill, get_client_canvas, get_content_inside_rect,
@@ -23,6 +24,7 @@ enum CurrentMode {
     Fill,
     Crop,
     CropPlace(ImageData),
+    Text(String),
 }
 
 #[derive(Clone)]
@@ -81,7 +83,18 @@ impl Color {
             "purple" => Color::Purple,
             "#8000FF" => Color::Violet,
             "pink" => Color::Pink,
-            _ => Color::Black,
+            _ => {
+                let rgb = Rgb::from_hex_str(&color);
+                match rgb {
+                    Ok(value) => {
+                        let r = value.get_red() as u8;
+                        let g = value.get_green() as u8;
+                        let b = value.get_blue() as u8;
+                        Color::Custom(r, g, b, 255)
+                    }
+                    Err(..) => Color::Black
+                }
+            },
         }
     }
 }
@@ -179,6 +192,11 @@ impl Canvas {
         Ok(())
     }
 
+    pub fn set_text(&mut self) -> Result<(), JsValue> {
+        *self.mode.borrow_mut() = CurrentMode::Text(String::from(""));
+        Ok(())
+    }
+
     pub fn export(&self) -> Result<String, JsValue> {
         self.underlying_layer.to_data_url()
     }
@@ -236,30 +254,32 @@ impl Canvas {
             let color = self.current_color.clone();
 
             let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
+                let offset_x = event.offset_x() as f64;
+                let offset_y = event.offset_y() as f64;
                 match &*mode.borrow() {
                     CurrentMode::Default => {
                         context.begin_path();
-                        context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                        context.move_to(offset_x, offset_y);
                         pressed.set(true);
                     }
                     CurrentMode::StraightLine => {
                         top_context.begin_path();
-                        line_start_x.set(event.offset_x() as f64);
-                        line_start_y.set(event.offset_y() as f64);
-                        top_context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                        line_start_x.set(offset_x);
+                        line_start_y.set(offset_y);
+                        top_context.move_to(offset_x, offset_y);
                         pressed.set(true);
                     }
                     CurrentMode::Circle => {
                         top_context.begin_path();
-                        line_start_x.set(event.offset_x() as f64);
-                        line_start_y.set(event.offset_y() as f64);
+                        line_start_x.set(offset_x);
+                        line_start_y.set(offset_y);
                         pressed.set(true);
                     }
                     CurrentMode::Fill => {
                         let _ = fill(
                             context.clone(),
-                            event.offset_x() as usize,
-                            event.offset_y() as usize,
+                            offset_x as usize,
+                            offset_y as usize,
                             width,
                             height,
                             &color.borrow(),
@@ -270,8 +290,8 @@ impl Canvas {
                         let _ = top_context.set_stroke_style(&JsValue::from_str("black"));
                         let lines: Array = vec![6].into_iter().map(JsValue::from).collect();
                         let _ = top_context.set_line_dash(&lines);
-                        line_start_x.set(event.offset_x() as f64);
-                        line_start_y.set(event.offset_y() as f64);
+                        line_start_x.set(offset_x);
+                        line_start_y.set(offset_y);
                         top_context.begin_path();
                         pressed.set(true);
                     }
@@ -279,10 +299,16 @@ impl Canvas {
                         top_context.begin_path();
                         let _ = top_context.put_image_data(
                             &value,
-                            event.offset_x() as f64,
-                            event.offset_y() as f64,
+                            offset_x,
+                            offset_y,
                         );
                         pressed.set(true);
+                    }
+                    CurrentMode::Text(..) => {
+                        top_context.rect(offset_x, offset_y, 100.0, 100.0);
+                        top_context.fill();
+                        top_context.set_stroke_style(&JsValue::from_str("black"));
+                        top_context.stroke();
                     }
                 }
             });
@@ -303,16 +329,18 @@ impl Canvas {
 
             let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
                 if pressed.get() {
+                    let offset_x = event.offset_x() as f64;
+                    let offset_y = event.offset_y() as f64;
                     match &*mode.borrow() {
                         CurrentMode::Default => {
-                            context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                            context.line_to(offset_x, offset_y);
                             context.stroke();
                             context.begin_path();
-                            context.move_to(event.offset_x() as f64, event.offset_y() as f64);
+                            context.move_to(offset_x, offset_y);
                         }
                         CurrentMode::StraightLine => {
                             top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
-                            top_context.line_to(event.offset_x() as f64, event.offset_y() as f64);
+                            top_context.line_to(offset_x, offset_y);
                             top_context.stroke();
                             top_context.begin_path();
                             top_context.move_to(line_start_x.get(), line_start_y.get());
@@ -322,12 +350,12 @@ impl Canvas {
                             let radius = two_point_distance(
                                 line_start_x.get() as f64,
                                 line_start_y.get() as f64,
-                                event.offset_x() as f64,
-                                event.offset_y() as f64,
+                                offset_x,
+                                offset_y,
                             );
                             let _ = top_context.arc(
-                                event.offset_x() as f64,
-                                event.offset_y() as f64,
+                                offset_x,
+                                offset_y,
                                 radius,
                                 0.0,
                                 2.0 * PI,
@@ -338,10 +366,10 @@ impl Canvas {
                         CurrentMode::Crop => {
                             top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
 
-                            let x = define_postition(line_start_x.get(), event.offset_x() as f64);
-                            let y = define_postition(line_start_y.get(), event.offset_y() as f64);
-                            let w = define_distance(line_start_x.get(), event.offset_x() as f64);
-                            let h = define_distance(line_start_y.get(), event.offset_y() as f64);
+                            let x = define_postition(line_start_x.get(), offset_x);
+                            let y = define_postition(line_start_y.get(), offset_y);
+                            let w = define_distance(line_start_x.get(), offset_x);
+                            let h = define_distance(line_start_y.get(), offset_y);
 
                             let _ = top_context.rect(x, y, w, h);
 
@@ -353,8 +381,8 @@ impl Canvas {
                             top_context.stroke();
                             let _ = top_context.put_image_data(
                                 &value,
-                                event.offset_x() as f64,
-                                event.offset_y() as f64,
+                                offset_x,
+                                offset_y
                             );
                             top_context.begin_path();
                         }
@@ -442,6 +470,22 @@ impl Canvas {
 
             self.top_layer
                 .add_event_listener_with_callback("mouseup", closure.as_ref().unchecked_ref())?;
+            closure.forget();
+        }
+
+        {
+            let mode = self.mode.clone();
+            let closure = Closure::<dyn FnMut(_)>::new(move |_event: web_sys::MouseEvent| {
+                match *mode.borrow() {
+                    CurrentMode::Text(..) => {
+
+                    }
+                    _ => ()
+                }
+            });
+
+            self.top_layer
+                .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())?;
             closure.forget();
         }
         Ok(())

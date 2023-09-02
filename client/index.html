@@ -10,39 +10,51 @@
     <script src="./bootstrap.js"></script>
     <div id="canvas-div">
       <div id="toolbox">
+        <label for="colors" class="lines-label">Stroke Style</label>
         <div>
-          <button class="color-button" id="eraser" value="white"></button>
-          <button class="color-button" id="black" value="black"></button>
-          <button class="color-button" id="gray" value="gray"></button>
-          <button class="color-button" id="red" value="red"></button>
-          <button class="color-button" id="blue" value="blue"></button>
-          <button class="color-button" id="water-blue" value="#1B95E0"></button>
-          <button class="color-button" id="yellow" value="yellow"></button>
-          <button class="color-button" id="orange" value="orange"></button>
-          <button class="color-button" id="green" value="green"></button>
-          <button class="color-button" id="jade" value="#00A86B"></button>
-          <button class="color-button" id="brown" value="brown"></button>
-          <button class="color-button" id="purple" value="purple"></button>
-          <button class="color-button" id="violet" value="#8000FF"></button>
-          <button class="color-button" id="pink" value="pink"></button>
+          <input type="color" list="colors" id="colors"/>
+          <datalist id="colors-list">
+            <option value="black"  ></option>
+            <option value="gray"   ></option>
+            <option value="red"    ></option>
+            <option value="blue"   ></option>
+            <option value="#1B95E0"></option>
+            <option value="yellow" ></option>
+            <option value="orange" ></option>
+            <option value="green"  ></option>
+            <option value="#00A86B"></option>
+            <option value="brown"  ></option>
+            <option value="purple" ></option>
+            <option value="#8000FF"></option>
+            <option value="#DC143C"></option>
+            <option value="pink"></option>
+            <option value="#A52A2A"></option>
+            <option value="#DC143C"></option>
+          </datalist>
+          <button class="color-button" id="eraser" value="white"><img src="https://cdn-icons-png.flaticon.com/512/979/979773.png" alt="eraser"></button>
         </div>
-        <div id="stroke-buttons">
-          <button class="stroke-button" id="very-small" value="0.5">Very Small</button>
-          <button class="stroke-button" id="small" value="2">Small</button>
-          <button class="stroke-button" id="medium" value="8">Medium</button>
-          <button class="stroke-button" id="large" value="13">Large</button>
-          <button class="stroke-button" id="very-large" value="20">Very Large</button>
-        </div>
+
+        <label for="lines" class="lines-label">Stroke Size</label>
+        <select name="lines" id="lines">
+          <option class="size" value="0.5">Very Small</option>
+          <option class="size" value="2">Small</option>
+          <option class="size" value="8" selected>Medium</option>
+          <option class="size" value="13">Large</option>
+          <option class="size" value="20">Very Large</option>
+        </select>
+
+        <label for="shape-buttons" class="lines-label">Modes</label>
         <div id="shape-buttons">
-          <button class="shape-button" id="pen">Pen</button>
-          <button class="shape-button" id="straight">Straight Line</button>
-          <button class="shape-button" id="circle">Circle</button>
-          <button class="shape-button" id="fill">Fill</button>
-          <button class="shape-button" id="crop">Crop</button>
+          <button class="shape-button" id="pen"><img src="https://cdn2.iconfinder.com/data/icons/flat-education-mini/20/pencil-512.png" alt="eraser"></button>
+          <button class="shape-button" id="straight"><img src="https://icon-library.com/images/straight-line-icon/straight-line-icon-6.jpg" alt="straight-line"></button>
+          <button class="shape-button" id="circle"><img src="https://www.freeiconspng.com/uploads/circle-icon-0.png" alt="circle"></button>
+          <button class="shape-button" id="fill"><img src="https://cdn-icons-png.flaticon.com/512/232/232928.png" alt="fill"></button>
+          <button class="shape-button" id="crop"><img src="https://www.clipartmax.com/png/middle/261-2617894_crop-comments-crop-tool-in-paint.png" alt="crop"></button>
+          <button class="shape-button" id="text"><img src="https://cdn3.iconfinder.com/data/icons/text-editing-2/100/Artboard_47-512.png" alt="text"></button>
         </div>
-        <div>
-          <button class="shape-button" id="export">Export</button>
-          <label for="import" class="shape-button">Import</label>
+        <div class="import-export">
+          <label id="export"><img src="https://img.icons8.com/?size=512&id=12124&format=png" alt="text">Export</label>
+          <label for="import" ><img src="https://img.icons8.com/?size=512&id=12247&format=png" alt="text">Import</label>
           <input type="file" style="visibility:hidden;" id="import">
         </div>
       </div>
