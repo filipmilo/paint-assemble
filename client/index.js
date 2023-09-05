@@ -2,15 +2,14 @@ import { Canvas } from "paint-assemble";
 import './index.css';
 
 const colorButtons = document.querySelectorAll(".color-button");
-const strokeButtons = document.querySelectorAll(".stroke-button");
+const strokes = document.querySelector("#lines");
+const colors = document.querySelector("#colors");
 
-colorButtons.forEach(button => {
-  button.addEventListener("click", () => canvas.set_stroke_color(button.value));
-});
+strokes.addEventListener('change', (e) => canvas.set_stroke_width(e.target.value));
 
-strokeButtons.forEach(button => {
-  button.addEventListener("click", () => canvas.set_stroke_width(button.value));
-});
+colorButtons.forEach(button => button.addEventListener("click", () => canvas.set_stroke_color(button.value)));
+
+colors.addEventListener("input", () => canvas.set_stroke_color(colors.value));
 
 document.querySelector("#straight").addEventListener("click", () => canvas.set_straight_line());
 
@@ -18,13 +17,11 @@ document.querySelector("#circle").addEventListener("click", () => canvas.set_cir
 
 document.querySelector("#pen").addEventListener("click", () => canvas.set_default_stroke());
 
-document.querySelector("#fill").addEventListener("click", () => {
-  canvas.set_fill()
-});
+document.querySelector("#fill").addEventListener("click", () => canvas.set_fill());
 
-document.querySelector("#crop").addEventListener("click", () => {
-  canvas.set_crop()
-});
+document.querySelector("#crop").addEventListener("click", () => canvas.set_crop());
+
+document.querySelector("#text").addEventListener("click", () => canvas.set_text());
 
 document.querySelector("#export").addEventListener("click", () => {
   const url = canvas.export();
@@ -50,6 +47,6 @@ document.querySelector("#import").addEventListener("change", (event) => {
   }
 });
 
-const canvas = Canvas.new_canvas(800, 1500);
+const canvas = Canvas.new_canvas(window.innerHeight * 0.97, window.innerWidth * 0.86);
 canvas.set_stroke_width(8)
-canvas.set_stroke_color("black");
+canvas.set_stroke_color(colors.value);

@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::rc::Rc;
 use wasm_bindgen::{prelude::wasm_bindgen, Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, Document, Element, HtmlCanvasElement, ImageData};
@@ -112,4 +113,8 @@ pub fn define_postition(line_start: f64, offset: f64) -> f64 {
 
 pub fn define_distance(line_start: f64, offset: f64) -> f64 {
     (line_start - offset).abs()
+}
+
+pub fn match_input(input: &str) -> bool {
+    Regex::new(r"^[a-zA-z0-9 ]$").unwrap().is_match(input)
 }

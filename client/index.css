@@ -1,3 +1,11 @@
+html{
+  height:99%;
+}
+
+body{
+  height:100%;
+}
+
 #canvas {
   border:1px solid black;
 }
@@ -5,13 +13,12 @@
 #canvas-div {
   display: flex;
   justify-content: flex-start;
-  align-items: centre;
+  height:100%;
 }
 
 #toolbox {
   display: flex;
   flex-direction: column;
-  align-items: centre;
   gap: 30px;
   width: 12%;
 }
@@ -23,9 +30,26 @@
   gap: 10px;
 }
 
+.import-export{
+  margin-top: auto;
+}
+
+.import-export label {
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.import-export label img{
+  width: 2rem;
+}
+
 #shape-buttons {
   display: flex;
-  gap: 10px;
+  width: 13rem;
+  justify-content: space-around;
+  flex-direction: row;
+  flex-wrap: wrap;
 }
 
 .color-button {
@@ -40,49 +64,45 @@
   border: none;
 }
 
-#eraser {
-  background: url(assets/eraser.png);
-}
-#red {
-  background-color: red;
-}
-#black {
-  background-color: black;
-}
-#gray {
-  background-color: gray;
-}
-#yellow {
-  background-color: yellow;
-}
-#orange {
-  background-color: orange;
-}
-#green {
-  background-color: green;
-}
-#jade {
-  background-color: #00A86B;
-}
-#blue {
-  background-color: blue;
-}
-#water-blue {
-  background-color: #1B95E0;
-}
-#brown {
-  background-color: brown;
-}
-#purple {
-  background-color: purple;
-}
-#violet {
-  background-color: #8000FF;
-}
-#pink {
-  background-color: pink;
+.lines-label{
+  display: inline;
 }
 
+select#lines  {
+  display: inline;
+  background: transparent;
+  height: 2.5rem;
+  border: none;
+  border: 1px solid gray;
+  padding: 0.5rem;
+  font-size: 1rem;
+  width: 12rem;
+}
+
+
+select#lines * {
+  border: none;
+  font-size: 1rem;
+}
+
+.shape-button{
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.shape-button img{
+  width: 2rem;
+}
+
+
+#eraser {
+  background-color: transparent;
+  cursor: pointer;
+}
+
+#eraser img{
+  width: 1.5rem;
+}
 
 #paint-assemble {
   position: relative;
