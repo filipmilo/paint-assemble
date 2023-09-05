@@ -7,14 +7,37 @@ use std::{
     vec,
 };
 
-use colors_transform::{Rgb, Color as CrateColor};
+use colors_transform::{Color as CrateColor, Rgb};
 use js_sys::Array;
 use utils::{
     define_distance, define_postition, fill, get_client_canvas, get_content_inside_rect,
-    get_document, two_point_distance,
+    get_document, log, match_input, two_point_distance,
 };
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
+
+#[derive(Clone)]
+struct TextData {
+    content: String,
+    position: (f64, f64),
+    font_size: u32,
+    font_type: String,
+}
+
+impl TextData {
+    fn append(&self, content: String) -> TextData {
+        TextData {
+            content,
+            position: self.position,
+            font_size: self.font_size,
+            font_type: self.font_type.clone(),
+        }
+    }
+
+    fn format_font(&self) -> String {
+        format!("{}px {}", self.font_size, self.font_type)
+    }
+}
 
 #[derive(Clone)]
 enum CurrentMode {
@@ -24,25 +47,13 @@ enum CurrentMode {
     Fill,
     Crop,
     CropPlace(ImageData),
-    Text(String),
+    Text(TextData),
 }
 
 #[derive(Clone)]
 pub enum Color {
     White,
     Black,
-    Gray,
-    Red,
-    Blue,
-    WaterBlue,
-    Yellow,
-    Orange,
-    Green,
-    Jade,
-    Brown,
-    Purple,
-    Violet,
-    Pink,
     Custom(u8, u8, u8, u8),
 }
 
@@ -51,38 +62,19 @@ impl Color {
         match *self {
             Color::White => (255, 255, 255, 255),
             Color::Black => (0, 0, 0, 255),
-            Color::Red => (255, 0, 0, 255),
-            Color::Gray => (128, 128, 128, 255),
-            Color::Blue => (0, 0, 255, 255),
-            Color::WaterBlue => (27, 149, 224, 255),
-            Color::Yellow => (255, 255, 0, 255),
-            Color::Orange => (255, 165, 0, 255),
-            Color::Green => (0, 128, 0, 255),
-            Color::Jade => (0, 168, 107, 255),
-            Color::Brown => (165, 42, 42, 255),
-            Color::Purple => (128, 0, 128, 255),
-            Color::Violet => (238, 130, 238, 255),
-            Color::Pink => (255, 192, 203, 255),
             Color::Custom(r, g, b, a) => (r, g, b, a),
         }
+    }
+
+    fn to_hex(&self) -> String {
+        let values = self.value();
+        Rgb::from(values.0 as f32, values.1 as f32, values.2 as f32).to_css_hex_string()
     }
 
     fn from_str(color: String) -> Color {
         match &color[..] {
             "white" => Color::White,
             "black" => Color::Black,
-            "gray" => Color::Gray,
-            "red" => Color::Red,
-            "blue" => Color::Blue,
-            "#1B95E0" => Color::WaterBlue,
-            "yellow" => Color::Yellow,
-            "orange" => Color::Orange,
-            "green" => Color::Green,
-            "#00A86B" => Color::Jade,
-            "brown" => Color::Brown,
-            "purple" => Color::Purple,
-            "#8000FF" => Color::Violet,
-            "pink" => Color::Pink,
             _ => {
                 let rgb = Rgb::from_hex_str(&color);
                 match rgb {
@@ -92,9 +84,9 @@ impl Color {
                         let b = value.get_blue() as u8;
                         Color::Custom(r, g, b, 255)
                     }
-                    Err(..) => Color::Black
+                    Err(..) => Color::Black,
                 }
-            },
+            }
         }
     }
 }
@@ -193,7 +185,17 @@ impl Canvas {
     }
 
     pub fn set_text(&mut self) -> Result<(), JsValue> {
-        *self.mode.borrow_mut() = CurrentMode::Text(String::from(""));
+        let text_data = TextData {
+            content: String::from(""),
+            position: (0.0, 0.0),
+            font_size: 48,
+            font_type: "serif".to_owned(),
+        };
+
+        let _ = self.top_layer.set_tab_index(1);
+        self.get_top_context()?.set_font(&text_data.format_font());
+        self.get_context()?.set_font(&text_data.format_font());
+        *self.mode.borrow_mut() = CurrentMode::Text(text_data);
         Ok(())
     }
 
@@ -223,7 +225,8 @@ impl Canvas {
     }
 
     fn setup_initial_canvas(&self) -> Result<(), JsValue> {
-        self.get_top_context()?.set_line_cap("round");
+        let top_context = self.get_top_context()?;
+        top_context.set_line_cap("round");
 
         let context = self.get_context()?;
         context.set_line_cap("round");
@@ -297,19 +300,10 @@ impl Canvas {
                     }
                     CurrentMode::CropPlace(value) => {
                         top_context.begin_path();
-                        let _ = top_context.put_image_data(
-                            &value,
-                            offset_x,
-                            offset_y,
-                        );
+                        let _ = top_context.put_image_data(&value, offset_x, offset_y);
                         pressed.set(true);
                     }
-                    CurrentMode::Text(..) => {
-                        top_context.rect(offset_x, offset_y, 100.0, 100.0);
-                        top_context.fill();
-                        top_context.set_stroke_style(&JsValue::from_str("black"));
-                        top_context.stroke();
-                    }
+                    _ => (),
                 }
             });
 
@@ -353,13 +347,7 @@ impl Canvas {
                                 offset_x,
                                 offset_y,
                             );
-                            let _ = top_context.arc(
-                                offset_x,
-                                offset_y,
-                                radius,
-                                0.0,
-                                2.0 * PI,
-                            );
+                            let _ = top_context.arc(offset_x, offset_y, radius, 0.0, 2.0 * PI);
                             top_context.stroke();
                             top_context.begin_path();
                         }
@@ -379,11 +367,7 @@ impl Canvas {
                         CurrentMode::CropPlace(value) => {
                             top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
                             top_context.stroke();
-                            let _ = top_context.put_image_data(
-                                &value,
-                                offset_x,
-                                offset_y
-                            );
+                            let _ = top_context.put_image_data(&value, offset_x, offset_y);
                             top_context.begin_path();
                         }
                         _ => (),
@@ -397,6 +381,8 @@ impl Canvas {
         }
         {
             let mode = self.mode.clone();
+            let context = context.clone();
+            let top_context = top_context.clone();
             let height = self.height;
             let width = self.width;
             let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::MouseEvent| {
@@ -464,6 +450,14 @@ impl Canvas {
                         *mode = CurrentMode::Crop;
                         top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
                     }
+                    CurrentMode::Text(value) => {
+                        *mode = CurrentMode::Text(TextData {
+                            content: value.content.clone(),
+                            position: (event.offset_x() as f64, event.offset_y() as f64),
+                            font_size: value.font_size,
+                            font_type: value.font_type.clone(),
+                        });
+                    }
                     _ => (),
                 }
             });
@@ -475,12 +469,62 @@ impl Canvas {
 
         {
             let mode = self.mode.clone();
-            let closure = Closure::<dyn FnMut(_)>::new(move |_event: web_sys::MouseEvent| {
-                match *mode.borrow() {
-                    CurrentMode::Text(..) => {
+            let height = self.height;
+            let width = self.width;
+            let color = self.current_color.clone();
+            let closure = Closure::<dyn FnMut(_)>::new(move |event: web_sys::KeyboardEvent| {
+                let mut mode = mode.borrow_mut();
+                match &*mode {
+                    CurrentMode::Text(value) => {
+                        let color_fill = &JsValue::from_str(&color.borrow().to_hex());
+                        top_context.set_fill_style(color_fill);
 
+                        let mut curr_content = value.content.clone();
+
+                        let key = event.key();
+                        match key.as_str() {
+                            "Enter" => {
+                                top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+                                context.set_fill_style(color_fill);
+                                let _ = context.fill_text(
+                                    &value.content,
+                                    value.position.0,
+                                    value.position.1,
+                                );
+                                context.set_fill_style(&JsValue::from_str("white"));
+                                *mode = CurrentMode::Text(value.append("".to_string()));
+                            }
+                            "Backspace" => {
+                                top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+                                curr_content.pop();
+                                let _ = top_context.fill_text(
+                                    &curr_content,
+                                    value.position.0,
+                                    value.position.1,
+                                );
+
+                                *mode = CurrentMode::Text(value.append(curr_content));
+                            }
+                            other => {
+                                if !match_input(other) {
+                                    return;
+                                }
+
+                                top_context.clear_rect(0.0, 0.0, width as f64, height as f64);
+
+                                curr_content.push_str(&key);
+
+                                let _ = top_context.fill_text(
+                                    &curr_content,
+                                    value.position.0,
+                                    value.position.1,
+                                );
+
+                                *mode = CurrentMode::Text(value.append(curr_content));
+                            }
+                        };
                     }
-                    _ => ()
+                    _ => (),
                 }
             });
 
