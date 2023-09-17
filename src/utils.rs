@@ -11,7 +11,7 @@ extern "C" {
     pub fn log(s: &str);
 }
 
-pub fn _set_panic_hook() {
+pub fn set_panic_hook() {
     // When the `console_error_panic_hook` feature is enabled, we can call the
     // `set_panic_hook` function at least once during initialization, and then
     // we will get better error messages if our code ever panics.
@@ -57,6 +57,7 @@ pub fn fill(
     height: u32,
     color: &Color,
 ) -> Result<(), JsValue> {
+    set_panic_hook();
     let image = ctx.get_image_data(0.0, 0.0, width as f64, height as f64)?;
     let mut data = image.data();
 
@@ -79,8 +80,14 @@ pub fn fill(
     while !stack.is_empty() {
         let node = stack.pop().unwrap();
 
-        if node > (width * height * 4 - 4) as usize
-            || (data[node], data[node + 1], data[node + 2], data[node + 3]) != replace_color
+        if node > (width * height * 4 - 4) as usize {
+            continue;
+        }
+
+        let current_color = (data[node], data[node + 1], data[node + 2], data[node + 3]);
+
+        if current_color != replace_color
+            && euclidian_distance(replacement_color, current_color) < 30.0
         {
             continue;
         }
@@ -101,6 +108,14 @@ pub fn fill(
         0.0,
         0.0,
     )
+}
+
+fn euclidian_distance(target_color: (u8, u8, u8, u8), replace_color: (u8, u8, u8, u8)) -> f64 {
+    let r = (target_color.0 as f64 - replace_color.0 as f64).powi(2);
+    let g = (target_color.1 as f64 - replace_color.1 as f64).powi(2);
+    let b = (target_color.2 as f64 - replace_color.2 as f64).powi(2);
+
+    (r + g + b).sqrt()
 }
 
 pub fn define_postition(line_start: f64, offset: f64) -> f64 {

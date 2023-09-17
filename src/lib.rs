@@ -11,7 +11,7 @@ use colors_transform::{Color as CrateColor, Rgb};
 use js_sys::Array;
 use utils::{
     define_distance, define_postition, fill, get_client_canvas, get_content_inside_rect,
-    get_document, log, match_input, two_point_distance,
+    get_document, match_input, two_point_distance,
 };
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
